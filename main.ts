@@ -1,4 +1,4 @@
-//% color="#8854d0"
+//% color="#f57542"
 namespace multigame {
     export enum AllButtons {
         A,
@@ -46,6 +46,7 @@ namespace multigame {
         lifeZeroHandler: () => void;
         countdownZeroHandler: () => void;
 
+
         constructor(public name: string, public startCallback: () => void) {
             this.buttonHandlers = {};
             this.updateHandlers = [];
@@ -55,11 +56,13 @@ namespace multigame {
 
     class MultigameState {
         registeredGames: MultigameGame[];
+        finishHandlers: ((game: string) => void)[];
         currentGame: MultigameGame;
         gameStartTime: number;
 
         constructor() {
             this.registeredGames = [];
+            this.finishHandlers = [];
 
             game.onUpdate(() => {
                 this.update();
@@ -69,6 +72,15 @@ namespace multigame {
         registerGame(name: string, startGame?: () => void) {
             const game = this.findGame(name);
             game.startCallback = startGame;
+        }
+
+        finishGame(name: string) {
+            // Clear event handlers by starting a nonexistent game
+            this.startGame("____");
+
+            for (const handler of this.finishHandlers) {
+                handler(name);
+            }
         }
 
         startGame(name: string) {
@@ -207,6 +219,10 @@ namespace multigame {
             if (this.currentGame && gameName === this.currentGame.name) this.registerEvents(game);
         }
 
+        registerGameFinishHandler(handler: (name: string) => void) {
+            this.finishHandlers.push(handler);
+        }
+
 
         findGame(name: string) {
             let existing = this.registeredGames.find(g => g.name === name);
@@ -234,6 +250,28 @@ namespace multigame {
     function doNothing() { };
 
     export let _state: MultigameState = new MultigameState();
+
+    //% group="Multigame"
+    //% weight=100
+    //% blockId=multi_startgame block="start game $gameName"
+    export function startGame(gameName: string) {
+        _state.startGame(gameName);
+    }
+
+    //% group="Multigame"
+    //% weight=90
+    //% blockId=multi_finishgame block="finish game $gameName"
+    export function finishGame(gameName: string) {
+        _state.finishGame(gameName);
+    }
+
+    //% group="Multigame"
+    //% weight=90
+    //% blockId=multi_ongamefinished block="on game $gameName finished"
+    //% draggableParameters="reporter"
+    export function onGameFinished(handler: (gameName: string) => void) {
+        _state.registerGameFinishHandler(handler);
+    }
     
 
     /**
@@ -241,7 +279,7 @@ namespace multigame {
      * @param body code to execute
      */
     //% group="Game"
-    //% weight=100 afterOnStart=true
+    //% weight=100
     //% blockId=multi_gameupdate block="on game update in game $gameName"
     //% blockAllowMultiple=1
     //% color="#8854d0"
@@ -254,7 +292,7 @@ namespace multigame {
      * @param body code to execute
      */
     //% group="Game"
-    //% weight=99 afterOnStart=true
+    //% weight=99
     //% blockId=multi_gameinterval block="on game update every $period ms in game $gameName"
     //% period.shadow=timePicker
     //% blockAllowMultiple=1
@@ -279,12 +317,21 @@ namespace multigame {
      * @param callback code to execute
      */
     //% group="Loops"
-    //% weight=98 afterOnStart=true
+    //% weight=98
     //% blockId=multi_forever block="forever in game $gameName"
     //% blockAllowMultiple=1
     //% color="#20BF6B"
-    export function forever(gameName: string, callback: () => void) {
-        _state.registerForeverHandler(gameName, callback);
+    export function forever(gameName: string, handler: () => void) {
+        _state.registerForeverHandler(gameName, handler);
+    }
+
+
+    //% group="Loops"
+    //% weight=100
+    //% blockId=multi_onstart block="on start in game $gameName"
+    //% color="#20BF6B"
+    export function onStart(gameName: string, handler: () => void) {
+        _state.registerGame(gameName, handler);
     }
 
     /**
