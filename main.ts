@@ -266,11 +266,19 @@ namespace multigame {
     }
 
     //% group="Multigame"
-    //% weight=90
+    //% weight=80
     //% blockId=multi_ongamefinished block="on game $gameName finished"
     //% draggableParameters="reporter"
     export function onGameFinished(handler: (gameName: string) => void) {
         _state.registerGameFinishHandler(handler);
+    }
+
+    //% group="Multigame"
+    //% weight=60
+    //% blockId=multi_isGameRunning block="is game $gameName running"
+    export function isGameRunning(gameName: string) {
+        if (_state.currentGame) return _state.currentGame.name === gameName;
+        return false;
     }
     
 
